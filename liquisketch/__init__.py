@@ -1,7 +1,7 @@
 """
-Starforge Python Library Template
+LiquiSketch
 
-A minimal Python library template for Starforge projects.
+A Python tool for turning Liquibase changelogs into schema diagrams.
 """
 
 from .hello_world import HelloWorld

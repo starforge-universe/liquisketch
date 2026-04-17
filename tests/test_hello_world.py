@@ -6,7 +6,7 @@ This module contains unit tests for the HelloWorld class functionality.
 
 from unittest import TestCase
 
-from starforge_library_template.hello_world import HelloWorld
+from liquisketch.hello_world import HelloWorld
 
 
 class TestHelloWorld(TestCase):

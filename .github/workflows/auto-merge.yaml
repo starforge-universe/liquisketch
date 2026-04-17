@@ -1,9 +1,9 @@
 name: 'Auto Merge Dependabot PRs'
 
 on:
-  workflow_run:
-    workflows: [ 'Pull request checks' ]
-    types: [ completed ]
+  workflow_dispatch: 
+  #  workflows: [ 'Pull request checks' ]
+  #  types: [ completed ]
 
 permissions:
   contents: write
