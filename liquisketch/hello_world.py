@@ -1,8 +1,8 @@
 """
-Hello World module for the Starforge library template.
+Hello World module for LiquiSketch.
 
 This module provides a simple HelloWorld class that demonstrates
-basic functionality for the library template.
+basic package functionality for LiquiSketch.
 """
 
 
@@ -10,7 +10,7 @@ class HelloWorld:
     """
     A simple class that provides greeting functionality.
     
-    This class serves as a minimal example for the library template.
+    This class serves as a minimal example for LiquiSketch.
     """
 
     def greet(self) -> str:

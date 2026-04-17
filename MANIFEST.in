@@ -1,7 +1,7 @@
 include LICENSE
 include README.md
 include pyproject.toml
-recursive-include starforge_library_template *.py
+recursive-include liquisketch *.py
 exclude tests/*
 exclude docs/*
 exclude venv/*

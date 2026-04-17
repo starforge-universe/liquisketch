@@ -3,9 +3,9 @@ requires = ["setuptools==82.0.1", "wheel==0.46.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "starforge-python-library-template"
+name = "liquisketch"
 version = "1.0.1"
-description = "A Python library template for Starforge projects"
+description = "Liquibase in, diagrams out. Sketch your schema from your changelog."
 readme = "README.md"
 license-files = ["LICENSE"]
 authors = [
@@ -14,7 +14,7 @@ authors = [
 maintainers = [
     {name = "Starforge Worker", email = "star.forge.worker@gmail.com"}
 ]
-keywords = ["template", "library", "python", "starforge"]
+keywords = ["liquibase", "schema", "diagram", "python", "liquisketch"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -45,20 +45,19 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/starforge-universe/python-library-template"
-Documentation = "https://python-library-template.readthedocs.io/"
-Repository = "https://github.com/starforge-universe/python-library-template"
-"Bug Tracker" = "https://github.com/starforge-universe/python-library-template/issues"
+Homepage = "https://github.com/starforge-universe/liquisketch"
+Repository = "https://github.com/starforge-universe/liquisketch"
+"Bug Tracker" = "https://github.com/starforge-universe/liquisketch/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["starforge_library_template*"]
+include = ["liquisketch*"]
 
 [project.scripts]
-starforge_library_template = "starforge_library_template.__main__:main"
+liquisketch = "liquisketch.__main__:main"
 
 [project.entry-points."console_scripts"]
-starforge_library_template = "starforge_library_template.__main__:main"
+liquisketch = "liquisketch.__main__:main"
 
 
 
@@ -74,7 +73,7 @@ max-line-length = 120
 good-names = ["i", "j", "k", "ex", "Run", "_"]
 
 [tool.coverage.run]
-source = ["starforge_library_template"]
+source = ["liquisketch"]
 omit = [
     "*/tests/*",
     "*/test_*",
