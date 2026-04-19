@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Fixture changelog for LiquiSketch tests: composed from ordered fragments. -->
+    <include file="01-initial-schema.xml" relativeToChangelogFile="true"/>
+    <include file="02-orders-and-lines.xml" relativeToChangelogFile="true"/>
+    <include file="03-drop-legacy-and-order-lines.xml" relativeToChangelogFile="true"/>
+
+</databaseChangeLog>

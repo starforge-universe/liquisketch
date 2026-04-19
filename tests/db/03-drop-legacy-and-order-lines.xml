@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Child table first: drop FK, then table (order matters for most databases). -->
+    <changeSet id="03-drop-order-lines-fk-and-table" author="liquisketch-fixture">
+        <dropForeignKeyConstraint
+            baseTableName="order_lines"
+            constraintName="fk_order_lines_order"/>
+        <dropTable tableName="order_lines"/>
+    </changeSet>
+
+    <!-- Legacy feature retired: remove FK then parent-ish legacy table. -->
+    <changeSet id="03-drop-deprecated-webhooks-fk-and-table" author="liquisketch-fixture">
+        <dropForeignKeyConstraint
+            baseTableName="deprecated_webhooks"
+            constraintName="fk_deprecated_webhooks_user"/>
+        <dropTable tableName="deprecated_webhooks"/>
+    </changeSet>
+
+</databaseChangeLog>
