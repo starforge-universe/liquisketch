@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser for ``liquisketch``."""
     parser = argparse.ArgumentParser(
         prog="liquisketch",
         description="Turn Liquibase changelogs into DrawIO schema diagrams.",
