@@ -57,9 +57,6 @@ jobs:
     environment: 'test'
     runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout project sources'
-        uses: actions/checkout@v6
-
       - name: 'Download build artifacts'
         uses: actions/download-artifact@v8
         with:
@@ -75,8 +72,8 @@ jobs:
       - name: 'Make venv'
         run: make venv
 
-      - name: 'Install twine'
-        run: pip install twine
+      - name: 'Install dev dependencies'
+        run: make install-dev
 
       - name: 'Publish to Test PyPI'
         run: |
