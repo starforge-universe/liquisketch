@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="01-create-users" author="liquisketch-fixture">
+        <createTable tableName="users">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Table slated for removal later (see 03): demonstrates FK + drop flow. -->
+    <changeSet id="01-create-deprecated-webhooks" author="liquisketch-fixture">
+        <createTable tableName="deprecated_webhooks">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="callback_url" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            constraintName="fk_deprecated_webhooks_user"
+            baseTableName="deprecated_webhooks"
+            baseColumnNames="user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="01-create-profiles-with-fk" author="liquisketch-fixture">
+        <createTable tableName="profiles">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="display_name" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            constraintName="fk_profiles_user"
+            baseTableName="profiles"
+            baseColumnNames="user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+    </changeSet>
+
+</databaseChangeLog>
