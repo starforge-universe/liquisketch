@@ -38,8 +38,9 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: 'Install twine'
-        run: pip install twine
+      - name: 'Install dependencies'
+        run: |
+          make install-dev
 
       - name: 'Publish to PyPI'
         run: |
