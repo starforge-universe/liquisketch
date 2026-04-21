@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.WARNING,
+        level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(levelname)s: %(message)s",
     )
     log = logging.getLogger("liquisketch")
@@ -60,8 +60,8 @@ def main(argv: list[str] | None = None) -> int:
         log.error("Changelog not found: %s", changelog)
         return 1
 
-    log.debug("Input changelog: %s", changelog)
-    log.debug("Output DrawIO: %s", output)
+    log.info("Input changelog: %s", changelog)
+    log.info("Output DrawIO: %s", output)
     try:
         schema = load_database_schema_from_master_changelog(changelog)
         sync_schema_to_drawio(output, schema)

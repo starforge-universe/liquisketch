@@ -4,11 +4,15 @@ Apply a single Liquibase changeSet to a DatabaseSchema in memory.
 
 from __future__ import annotations
 
+import logging
+
 from liquisketch.schema import Column, DatabaseSchema, ForeignKey, Table
 
 from .exceptions import LiquibaseReadingError
 from .types import ChangeSetRef
 from .xmlutil import local_name
+
+LOG = logging.getLogger(__name__)
 
 
 def _parse_bool(value: str | None, default: bool = False) -> bool:
@@ -79,6 +83,7 @@ def _apply_create_table(schema: DatabaseSchema, el) -> None:
             continue
         columns.append(_column_from_liquibase_column_element(child))
     schema.tables.append(Table(name=table_name, columns=columns, foreign_keys=[]))
+    LOG.debug("Extracted change: createTable table=%s columns=%d", table_name, len(columns))
 
 
 def _apply_add_foreign_key(schema: DatabaseSchema, el) -> None:
@@ -99,6 +104,14 @@ def _apply_add_foreign_key(schema: DatabaseSchema, el) -> None:
         target_column=_first_csv(ref_cols),
     )
     table.foreign_keys.append(fk)
+    LOG.debug(
+        "Extracted change: addForeignKey name=%s source=%s.%s target=%s.%s",
+        fk.name or "<unnamed>",
+        fk.source_table,
+        fk.source_column,
+        fk.target_table,
+        fk.target_column,
+    )
 
 
 def _apply_drop_foreign_key(schema: DatabaseSchema, el) -> None:
@@ -113,6 +126,7 @@ def _apply_drop_foreign_key(schema: DatabaseSchema, el) -> None:
         msg = f"Foreign key not found on {base_table}: {constraint}"
         raise LiquibaseReadingError(msg)
     table.foreign_keys = keep
+    LOG.debug("Extracted change: dropForeignKey table=%s name=%s", base_table, constraint)
 
 
 def _apply_drop_table(schema: DatabaseSchema, el) -> None:
@@ -131,6 +145,7 @@ def _apply_drop_table(schema: DatabaseSchema, el) -> None:
             for fk in t.foreign_keys
             if table_name not in (fk.target_table, fk.source_table)
         ]
+    LOG.debug("Extracted change: dropTable table=%s", table_name)
 
 
 def _apply_add_column(schema: DatabaseSchema, el) -> None:
@@ -148,6 +163,7 @@ def _apply_add_column(schema: DatabaseSchema, el) -> None:
             msg = f"Column already exists: {table_name}.{col.name}"
             raise LiquibaseReadingError(msg)
         table.columns.append(col)
+        LOG.debug("Extracted change: addColumn column=%s.%s", table_name, col.name)
 
 
 def _apply_drop_column(schema: DatabaseSchema, el) -> None:
@@ -171,6 +187,7 @@ def _apply_drop_column(schema: DatabaseSchema, el) -> None:
                 or (fk.target_table == table_name and fk.target_column == column_name)
             )
         ]
+    LOG.debug("Extracted change: dropColumn column=%s.%s", table_name, column_name)
 
 
 def _apply_rename_table(schema: DatabaseSchema, el) -> None:
@@ -187,6 +204,7 @@ def _apply_rename_table(schema: DatabaseSchema, el) -> None:
                 fk.source_table = new
             if fk.target_table == old:
                 fk.target_table = new
+    LOG.debug("Extracted change: renameTable from=%s to=%s", old, new)
 
 
 def _apply_rename_column(schema: DatabaseSchema, el) -> None:
@@ -210,6 +228,7 @@ def _apply_rename_column(schema: DatabaseSchema, el) -> None:
                 fk.source_column = new
             if fk.target_table == table_name and fk.target_column == old:
                 fk.target_column = new
+    LOG.debug("Extracted change: renameColumn table=%s from=%s to=%s", table_name, old, new)
 
 
 def _apply_modify_data_type(schema: DatabaseSchema, el) -> None:
@@ -222,7 +241,15 @@ def _apply_modify_data_type(schema: DatabaseSchema, el) -> None:
     table = _require_table(schema, table_name)
     for col in table.columns:
         if col.name == column_name:
+            old_type = col.data_type
             col.data_type = new_type
+            LOG.debug(
+                "Extracted change: modifyDataType column=%s.%s from=%s to=%s",
+                table_name,
+                column_name,
+                old_type,
+                new_type,
+            )
             return
     msg = f"Column not found: {table_name}.{column_name}"
     raise LiquibaseReadingError(msg)
@@ -248,31 +275,57 @@ def apply_changeset_to_schema(schema: DatabaseSchema, changeset: ChangeSetRef) -
     Apply all structural changes in one changeSet to the schema (mutates in place).
     """
     el = changeset.element
+    applied_changes = 0
     for child in el:
         tag = local_name(child.tag)
         if tag in _SKIP_CHANGE_TAGS:
+            LOG.debug(
+                "Skipping non-structural change tag=%s in changeSet id=%s",
+                tag,
+                changeset.changeset_id or "<missing>",
+            )
             continue
         if tag == "createTable":
             _apply_create_table(schema, child)
+            applied_changes += 1
         elif tag == "addForeignKeyConstraint":
             _apply_add_foreign_key(schema, child)
+            applied_changes += 1
         elif tag == "dropForeignKeyConstraint":
             _apply_drop_foreign_key(schema, child)
+            applied_changes += 1
         elif tag == "dropTable":
             _apply_drop_table(schema, child)
+            applied_changes += 1
         elif tag == "addColumn":
             _apply_add_column(schema, child)
+            applied_changes += 1
         elif tag == "dropColumn":
             _apply_drop_column(schema, child)
+            applied_changes += 1
         elif tag == "renameTable":
             _apply_rename_table(schema, child)
+            applied_changes += 1
         elif tag == "renameColumn":
             _apply_rename_column(schema, child)
+            applied_changes += 1
         elif tag == "modifyDataType":
             _apply_modify_data_type(schema, child)
+            applied_changes += 1
         else:
             # Unknown change types are ignored until the model supports them.
+            LOG.debug(
+                "Unknown change tag skipped: tag=%s in changeSet id=%s",
+                tag,
+                changeset.changeset_id or "<missing>",
+            )
             continue
+    LOG.debug(
+        "Applied changeSet id=%s author=%s structural_changes=%d",
+        changeset.changeset_id or "<missing>",
+        changeset.author or "<missing>",
+        applied_changes,
+    )
     return schema
 
 

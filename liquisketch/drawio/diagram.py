@@ -6,12 +6,15 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import zlib
 from pathlib import Path
 from urllib.parse import quote, unquote
 from xml.etree import ElementTree as ET
 
 from liquisketch.schema import DatabaseSchema, Table
+
+LOG = logging.getLogger(__name__)
 
 TABLE_HEADER_HEIGHT = 28
 COLUMN_ROW_HEIGHT = 24
@@ -28,11 +31,13 @@ def sync_schema_to_drawio(path: Path, schema: DatabaseSchema) -> None:
 
     If ``path`` does not exist, a new uncompressed Draw.io file is created.
     """
+    LOG.debug("Drawio sync started: output=%s schema=%s", path, schema.name)
     drawio = _DrawioFile.load(path)
     diagram_root = ET.fromstring(drawio.diagram_xml)
     _sync_graph_model(diagram_root, schema)
     drawio.diagram_xml = ET.tostring(diagram_root, encoding="unicode")
     drawio.save(path)
+    LOG.debug("Drawio sync finished: output=%s", path)
 
 
 class _DrawioFile:
@@ -49,6 +54,7 @@ class _DrawioFile:
     def load(cls, path: Path) -> _DrawioFile:
         """Load a drawio file and decode the diagram content if needed."""
         if not path.exists():
+            LOG.debug("Drawio file does not exist, creating new uncompressed document: %s", path)
             mxfile = ET.Element("mxfile", host="app.diagrams.net", version="24.0.0")
             ET.SubElement(mxfile, "diagram", id="liquisketch", name="Page-1")
             graph = _new_graph_model()
@@ -64,9 +70,11 @@ class _DrawioFile:
         diagram_text = _extract_diagram_content(diagram)
         stripped = diagram_text.lstrip()
         if stripped.startswith("<"):
+            LOG.debug("Loaded drawio in uncompressed XML mode: %s", path)
             return cls(mxfile=mxfile, diagram_xml=diagram_text, compressed=False)
 
         decoded = _decode_compressed_diagram(diagram_text)
+        LOG.debug("Loaded drawio in compressed mode: %s", path)
         return cls(mxfile=mxfile, diagram_xml=decoded, compressed=True)
 
     def save(self, path: Path) -> None:
@@ -83,12 +91,14 @@ class _DrawioFile:
             diagram.text = _encode_compressed_diagram(self.diagram_xml)
             diagram.set("id", diagram_id)
             diagram.set("name", diagram_name)
+            LOG.debug("Saved drawio in compressed mode: %s", path)
         else:
             graph_model = ET.fromstring(self.diagram_xml)
             diagram.clear()
             diagram.append(graph_model)
             diagram.set("id", diagram_id)
             diagram.set("name", diagram_name)
+            LOG.debug("Saved drawio in uncompressed XML mode: %s", path)
 
         path.parent.mkdir(parents=True, exist_ok=True)
         ET.ElementTree(self.mxfile).write(path, encoding="utf-8", xml_declaration=True)
@@ -139,6 +149,10 @@ def _sync_graph_model(graph_model: ET.Element, schema: DatabaseSchema) -> None:
         msg = "Invalid graph model: missing root"
         raise ValueError(msg)
 
+    existing_state = _collect_managed_state(root)
+    target_state = _collect_target_state(schema)
+    _log_sync_events(existing_state, target_state)
+
     table_positions = _collect_table_positions(graph_model)
     managed = [cell for cell in root.findall("mxCell") if cell.get("lsKind")]
     for cell in managed:
@@ -163,6 +177,72 @@ def _collect_table_positions(graph_model: ET.Element) -> dict[str, tuple[float, 
         y = float(geo.get("y", "0"))
         positions[table_name] = (x, y)
     return positions
+
+
+def _collect_managed_state(root: ET.Element) -> dict[str, set[str]]:
+    """Collect current managed tables/columns/fks from diagram root."""
+    tables: set[str] = set()
+    columns: set[str] = set()
+    foreign_keys: set[str] = set()
+
+    for cell in root.findall("mxCell"):
+        kind = cell.get("lsKind")
+        if kind == "table":
+            table_name = cell.get("lsTable")
+            if table_name:
+                tables.add(table_name)
+        elif kind == "column":
+            table_name = cell.get("lsTable")
+            column_name = cell.get("lsColumn")
+            if table_name and column_name:
+                columns.add(f"{table_name}.{column_name}")
+        elif kind == "fk":
+            source = cell.get("source")
+            target = cell.get("target")
+            if source and target:
+                foreign_keys.add(f"{source}->{target}")
+
+    return {"tables": tables, "columns": columns, "fks": foreign_keys}
+
+
+def _collect_target_state(schema: DatabaseSchema) -> dict[str, set[str]]:
+    """Collect expected managed tables/columns/fks from schema."""
+    tables: set[str] = set()
+    columns: set[str] = set()
+    foreign_keys: set[str] = set()
+
+    for table in schema.tables:
+        tables.add(table.name)
+        for column in table.columns:
+            columns.add(f"{table.name}.{column.name}")
+        for fk in table.foreign_keys:
+            source_row_id = _table_row_id(fk.source_table, fk.source_column)
+            target_row_id = _table_row_id(fk.target_table, fk.target_column)
+            foreign_keys.add(
+                f"{source_row_id}->{target_row_id}"
+            )
+
+    return {"tables": tables, "columns": columns, "fks": foreign_keys}
+
+
+def _log_sync_events(existing_state: dict[str, set[str]], target_state: dict[str, set[str]]) -> None:
+    """Log add/delete/update counts for tables, columns, and foreign keys."""
+    _log_kind_events("table", existing_state["tables"], target_state["tables"])
+    _log_kind_events("column", existing_state["columns"], target_state["columns"])
+    _log_kind_events("fk", existing_state["fks"], target_state["fks"])
+
+
+def _log_kind_events(kind: str, existing_items: set[str], target_items: set[str]) -> None:
+    """Log synchronization events for one managed item kind."""
+    added = target_items - existing_items
+    deleted = existing_items - target_items
+    updated = existing_items & target_items
+    for item in sorted(added):
+        LOG.debug("Drawio sync %s add: %s", kind, item)
+    for item in sorted(updated):
+        LOG.debug("Drawio sync %s update: %s", kind, item)
+    for item in sorted(deleted):
+        LOG.debug("Drawio sync %s delete: %s", kind, item)
 
 
 def _table_position(

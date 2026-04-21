@@ -4,11 +4,14 @@ Load a :class:`~liquisketch.schema.DatabaseSchema` from a Liquibase master chang
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from liquisketch.schema import DatabaseSchema
 
 from .changelog_file import process_changelog_file
+
+LOG = logging.getLogger(__name__)
 
 
 def load_database_schema_from_master_changelog(master_changelog_path: Path) -> DatabaseSchema:
@@ -22,5 +25,7 @@ def load_database_schema_from_master_changelog(master_changelog_path: Path) -> D
     """
     master_path = master_changelog_path.expanduser().resolve()
     schema = DatabaseSchema(name=master_path.stem)
+    LOG.debug("Liquibase load started: master=%s", master_path)
     process_changelog_file(schema, master_path)
+    LOG.debug("Liquibase load finished: tables=%d", len(schema.tables))
     return schema

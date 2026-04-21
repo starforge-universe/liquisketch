@@ -6,10 +6,10 @@ on:
   workflow_call:
     inputs:
       pypi-repository:
-        description: 'Twine --repository-url (upload API, e.g. https://upload.pypi.org/legacy/)'
+        description: 'Twine --repository-url (upload API, e.g. https://test.pypi.org/legacy/)'
         required: false
         type: string
-        default: 'https://upload.pypi.org/legacy/'
+        default: 'https://test.pypi.org/legacy/'
     secrets:
       pypi-username:
         required: true
