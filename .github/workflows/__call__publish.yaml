@@ -39,6 +39,9 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
+      - name: 'Make venv'
+        run: make venv
+
       # Twine comes from [dev]; Makefile targets use .venv/bin/twine.
       - name: 'Install dependencies (make install-dev)'
         run: make install-dev
