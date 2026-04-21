@@ -71,6 +71,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
+      
+      - name: 'Make venv'
+        run: make venv
 
       - name: 'Install twine'
         run: pip install twine
