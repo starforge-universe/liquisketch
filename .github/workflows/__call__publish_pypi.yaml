@@ -1,0 +1,66 @@
+# Reusable workflow: checkout, download build artifact, venv + install-dev, twine upload via Makefile.
+# Expects artifact from __call__build (dist/, Makefile, pyproject.toml) and full repo for editable install.
+
+name: 'Submodule - Publish PyPI'
+
+on:
+  workflow_call:
+    inputs:
+      twine-repository-url:
+        description: 'Twine --repository-url (upload API, e.g. Test PyPI or upload.pypi.org legacy)'
+        required: true
+        type: string
+      artifact-name:
+        description: 'Artifact name from the build job'
+        required: false
+        type: string
+        default: 'python-package'
+      python-version:
+        description: 'Python version for setup-python'
+        required: false
+        type: string
+        default: '3.11'
+    secrets:
+      pypi_username:
+        description: 'PyPI username for twine upload'
+        required: true
+      pypi_password:
+        description: 'PyPI password or API token for twine upload'
+        required: true
+
+jobs:
+  publish:
+    name: 'Publish'
+    runs-on: ubuntu-latest
+    steps:
+      # install-dev needs the package tree (pip install -e .); artifact only supplies dist + metadata.
+      - name: 'Checkout project sources'
+        uses: actions/checkout@v6
+
+      # Overlay built wheels and build-time pyproject/Makefile (version matches build job).
+      - name: 'Download build artifacts'
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: .
+
+      - name: 'Setup Python ${{ inputs.python-version }}'
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+
+      - name: 'Make venv'
+        run: make venv
+
+      - name: 'Install dev dependencies'
+        run: make install-dev
+
+      # Makefile upload-pypi reads TWINE_* (see Makefile).
+      - name: 'Publish with twine (make upload-pypi)'
+        env:
+          TWINE_USERNAME: ${{ secrets.pypi_username }}
+          TWINE_PASSWORD: ${{ secrets.pypi_password }}
+          TWINE_REPOSITORY_URL: ${{ inputs.twine-repository-url }}
+          TWINE_NON_INTERACTIVE: '1'
+        run: make upload-pypi
