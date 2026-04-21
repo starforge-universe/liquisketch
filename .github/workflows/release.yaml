@@ -5,8 +5,6 @@ on:
     branches:
       - 'release/*'
 
-env:
-  PYTHON_VERSION: '3.11'
 
 jobs:
   # Extract version from branch name
@@ -57,7 +55,7 @@ jobs:
     uses: ./.github/workflows/__call__publish_pypi.yaml
     with:
       environment: 'test'
-      python-version: ${{ env.PYTHON_VERSION }}
+      python-version: '3.11'
       twine-repository-url: ${{ vars.PYPI_REPOSITORY || 'https://test.pypi.org/legacy/' }}
     secrets:
       pypi_username: ${{ secrets.PYPI_USERNAME }}
@@ -71,8 +69,7 @@ jobs:
     uses: ./.github/workflows/__call__publish_pypi.yaml
     with:
       environment: 'production'
-      python-version: ${{ env.PYTHON_VERSION }}
-      # Upload API (not the simple index URL).
+      python-version: '3.11'
       twine-repository-url: ${{ vars.PYPI_REPOSITORY || 'https://upload.pypi.org/legacy/' }}
     secrets:
       pypi_username: ${{ secrets.PYPI_USERNAME }}
