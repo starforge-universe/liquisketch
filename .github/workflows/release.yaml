@@ -54,9 +54,9 @@ jobs:
     name: 'Publish to Test PyPI'
     needs: [build]
     if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
-    environment: 'test'
     uses: ./.github/workflows/__call__publish_pypi.yaml
     with:
+      environment: 'test'
       python-version: ${{ env.PYTHON_VERSION }}
       twine-repository-url: ${{ vars.PYPI_REPOSITORY || 'https://test.pypi.org/legacy/' }}
     secrets:
@@ -68,9 +68,9 @@ jobs:
     name: 'Publish to Production PyPI'
     needs: [publish-test]
     if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
-    environment: 'production'
     uses: ./.github/workflows/__call__publish_pypi.yaml
     with:
+      environment: 'production'
       python-version: ${{ env.PYTHON_VERSION }}
       # Upload API (not the simple index URL).
       twine-repository-url: ${{ vars.PYPI_REPOSITORY || 'https://upload.pypi.org/legacy/' }}
