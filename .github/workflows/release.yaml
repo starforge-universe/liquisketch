@@ -57,30 +57,37 @@ jobs:
     environment: 'test'
     runs-on: ubuntu-latest
     steps:
+      # install-dev needs the package tree (pip install -e .); artifact only supplies dist + metadata.
+      - name: 'Checkout project sources'
+        uses: actions/checkout@v6
+
+      # Overlay built wheels and build-time pyproject/Makefile (version matches build job).
       - name: 'Download build artifacts'
         uses: actions/download-artifact@v8
         with:
           name: python-package
-          path: dist/
+          path: .
 
       - name: 'Setup Python ${{ env.PYTHON_VERSION }}'
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: 'Make venv'
         run: make venv
 
       - name: 'Install dev dependencies'
         run: make install-dev
 
+      # Twine reads TWINE_*; Makefile upload-pypi uses TWINE_REPOSITORY_URL (see Makefile).
       - name: 'Publish to Test PyPI'
-        run: |
-          PYPI_REPOSITORY=${{ vars.PYPI_REPOSITORY || 'https://test.pypi.org/legacy/' }} \
-          PYPI_USERNAME=${{ secrets.PYPI_USERNAME }} \
-          PYPI_PASSWORD=${{ secrets.PYPI_PASSWORD }} \
-          make upload-pypi
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          TWINE_REPOSITORY_URL: ${{ vars.PYPI_REPOSITORY || 'https://test.pypi.org/legacy/' }}
+          TWINE_NON_INTERACTIVE: '1'
+        run: make upload-pypi
 
   # Publish to Production PyPI
   publish-production:
@@ -97,7 +104,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: python-package
-          path: dist/
+          path: .
 
       - name: 'Setup Python ${{ env.PYTHON_VERSION }}'
         uses: actions/setup-python@v6
@@ -105,15 +112,20 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: 'Install twine'
-        run: pip install twine
+      - name: 'Make venv'
+        run: make venv
+
+      - name: 'Install dev dependencies'
+        run: make install-dev
 
       - name: 'Publish to Production PyPI'
-        run: |
-          PYPI_REPOSITORY=${{ vars.PYPI_REPOSITORY || 'https://pypi.org/simple/' }} \
-          PYPI_USERNAME=${{ secrets.PYPI_USERNAME }} \
-          PYPI_PASSWORD=${{ secrets.PYPI_PASSWORD }} \
-          make upload-pypi
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          # Upload API (not the simple index URL).
+          TWINE_REPOSITORY_URL: ${{ vars.PYPI_REPOSITORY || 'https://upload.pypi.org/legacy/' }}
+          TWINE_NON_INTERACTIVE: '1'
+        run: make upload-pypi
 
   # Create release tag
   tag-release:
