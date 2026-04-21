@@ -11,25 +11,87 @@ LiquiSketch is a Python utility that reads Liquibase changelogs and produces sch
 - Improve onboarding and design reviews
 - Catch schema drift earlier
 
-## Quick Start
+## Quick Start (development)
+
+From a clone of this repository:
 
 ```bash
 pip install -e ".[dev]"
 make check
 ```
 
+## Installation
+
+### From PyPI
+
+Install the published package (requires Python 3.11+):
+
+```bash
+pip install liquisketch
+```
+
+This installs the `liquisketch` package and the **`liquisketch`** console script (see [Command line](#command-line)).
+
+### From the GitHub repository
+
+Install the latest default branch without cloning:
+
+```bash
+pip install "git+https://github.com/starforge-universe/liquisketch.git"
+```
+
+Pin a tag or branch:
+
+```bash
+pip install "git+https://github.com/starforge-universe/liquisketch.git@v1.0.1"
+pip install "git+https://github.com/starforge-universe/liquisketch.git@main"
+```
+
+### Editable install from a local clone
+
+For development, install in editable mode from the repo root:
+
+```bash
+git clone https://github.com/starforge-universe/liquisketch.git
+cd liquisketch
+pip install -e ".[dev]"
+```
+
 ## Usage
 
-### Generate a diagram from a Liquibase master changelog
+### Command line
+
+After installation, run **`liquisketch`** with two positional arguments:
+
+1. **`CHANGELOG`** — path to your Liquibase **master** changelog XML (for example `changelog-master.xml`).
+2. **`OUTPUT`** — path where the Draw.io diagram should be written (for example `schema.drawio`).
+
+```bash
+liquisketch path/to/changelog-master.xml path/to/output.drawio
+```
+
+Verbose logging (Liquibase parsing and Draw.io sync details):
+
+```bash
+liquisketch -v path/to/changelog-master.xml path/to/output.drawio
+```
+
+You can also invoke the package as a module (same arguments):
+
+```bash
+python -m liquisketch path/to/changelog-master.xml path/to/output.drawio
+```
+
+Show help:
+
+```bash
+liquisketch --help
+```
+
+### Example with the repository test fixture
 
 ```bash
 liquisketch tests/db/changelog-master.xml tests/db/schema.drawio
-```
-
-You can also run the module directly:
-
-```bash
-python -m liquisketch tests/db/changelog-master.xml tests/db/schema.drawio
 ```
 
 ### Synchronization behavior
