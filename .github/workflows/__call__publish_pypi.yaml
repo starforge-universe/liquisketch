@@ -6,6 +6,11 @@ name: 'Submodule - Publish PyPI'
 on:
   workflow_call:
     inputs:
+      environment:
+        description: 'Environment to publish to'
+        required: true
+        type: string
+        default: 'test'
       twine-repository-url:
         description: 'Twine --repository-url (upload API, e.g. Test PyPI or upload.pypi.org legacy)'
         required: true
@@ -32,6 +37,7 @@ jobs:
   publish:
     name: 'Publish'
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       # install-dev needs the package tree (pip install -e .); artifact only supplies dist + metadata.
       - name: 'Checkout project sources'
