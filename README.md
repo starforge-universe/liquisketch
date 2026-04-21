@@ -15,8 +15,43 @@ LiquiSketch is a Python utility that reads Liquibase changelogs and produces sch
 
 ```bash
 pip install -e ".[dev]"
-make test
-make lint
+make check
+```
+
+## Usage
+
+### Generate a diagram from a Liquibase master changelog
+
+```bash
+liquisketch tests/db/changelog-master.xml tests/db/schema.drawio
+```
+
+You can also run the module directly:
+
+```bash
+python -m liquisketch tests/db/changelog-master.xml tests/db/schema.drawio
+```
+
+### Synchronization behavior
+
+- Creates the output file when it does not exist.
+- Synchronizes tables, columns, and foreign keys with the changelog-derived schema.
+- Removes diagram elements that no longer exist in schema.
+- Keeps the original diagram format when updating an existing file:
+  - compressed stays compressed
+  - uncompressed stays uncompressed
+- New files are written as uncompressed Draw.io XML.
+
+### Python API
+
+```python
+from pathlib import Path
+
+from liquisketch.drawio import sync_schema_to_drawio
+from liquisketch.liquibase import load_database_schema_from_master_changelog
+
+schema = load_database_schema_from_master_changelog(Path("tests/db/changelog-master.xml"))
+sync_schema_to_drawio(Path("tests/db/schema.drawio"), schema)
 ```
 
 ## Project Layout
