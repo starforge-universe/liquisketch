@@ -54,7 +54,7 @@ jobs:
   # Run checks first
   checks:
     name: 'Run Checks'
-    needs: extract-version
+    needs: [extract-version]
     uses: ./.github/workflows/__call__checks.yaml
 
   # Build package with extracted version
@@ -86,7 +86,7 @@ jobs:
   # Create release tag
   tag-release:
     name: 'Tag Release'
-    needs: [extract-version, publish-production]
+    needs: [extract-version, publish-test]
     runs-on: ubuntu-latest
     if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
     permissions:
@@ -110,7 +110,7 @@ jobs:
   # Publish to Production PyPI
   publish-production:
     name: 'Publish to Production PyPI'
-    needs: [publish-test]
+    needs: [tag-release]
     if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
     uses: ./.github/workflows/__call__publish_pypi.yaml
     with:
