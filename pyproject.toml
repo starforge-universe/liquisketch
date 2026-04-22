@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liquisketch"
-version = "1.0.1"
+version = "0.0.0"
 description = "Liquibase in, diagrams out. Sketch your schema from your changelog."
 readme = "README.md"
 license-files = ["LICENSE"]
