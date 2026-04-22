@@ -1,5 +1,5 @@
-# Reusable workflow: checkout, download build artifact, venv + install-dev, twine upload via Makefile.
-# Expects artifact from __call__build (dist/, Makefile, pyproject.toml) and full repo for editable install.
+# Reusable workflow: checkout, download build artifact, venv, twine upload via Makefile.
+# Expects artifact from __call__build (dist/, Makefile, pyproject.toml).
 
 name: 'Submodule - Publish PyPI'
 
@@ -39,10 +39,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-      # install-dev needs the package tree (pip install -e .); artifact only supplies dist + metadata.
-      - name: 'Checkout project sources'
-        uses: actions/checkout@v6
-
       # Overlay built wheels and build-time pyproject/Makefile (version matches build job).
       - name: 'Download build artifacts'
         uses: actions/download-artifact@v8
@@ -59,8 +55,8 @@ jobs:
       - name: 'Make venv'
         run: make venv
 
-      - name: 'Install dev dependencies'
-        run: make install-dev
+      - name: 'Install twine'
+        run: .venv/bin/pip install twine
 
       # Makefile upload-pypi reads TWINE_* (see Makefile).
       - name: 'Publish with twine (make upload-pypi)'
