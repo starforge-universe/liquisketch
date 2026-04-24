@@ -17,9 +17,8 @@ on:
         type: string
       artifact-name:
         description: 'Artifact name from the build job'
-        required: false
+        required: true
         type: string
-        default: 'python-package'
       python-version:
         description: 'Python version for setup-python'
         required: false

@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.patch.outputs.version }}
+      dev-number: ${{ steps.dev-number.outputs.value }}
     steps:
       - name: 'Checkout project sources'
         uses: actions/checkout@v6
@@ -51,6 +52,12 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Next version: $VERSION"
 
+      - name: Compute dev number from run and attempt
+        id: dev-number
+        run: |
+          DEV_NUMBER=$((GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
+          echo "value=${DEV_NUMBER}" >> "$GITHUB_OUTPUT"
+
   # Run checks first
   checks:
     name: 'Run Checks'
@@ -62,23 +69,48 @@ jobs:
   # 1. Update pyproject.toml with the extracted version
   # 2. Build the package using the updated version
   # 3. Verify the built package has the correct version
-  build:
-    name: 'Build Package'
+  build-test:
+    name: 'Build Test Package'
     needs: [extract-version, checks]
     uses: ./.github/workflows/__call__build.yaml
     with:
-      version: ${{ needs.extract-version.outputs.version }}
+      version: '${{ needs.extract-version.outputs.version }}.dev${{ needs.extract-version.outputs.dev-number }}'
+      artifact-name: 'python-package-test'
 
   # Publish to Test PyPI
   publish-test:
     name: 'Publish to Test PyPI'
-    needs: [build]
+    needs: [extract-version, build-test]
     if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
     uses: ./.github/workflows/__call__publish_pypi.yaml
     with:
       environment: 'test'
       python-version: '3.11'
       twine-repository-url: ${{ vars.PYPI_REPOSITORY || 'https://test.pypi.org/legacy/' }}
+      artifact-name: 'python-package-test'
+    secrets:
+      pypi_username: ${{ secrets.PYPI_USERNAME }}
+      pypi_password: ${{ secrets.PYPI_PASSWORD }}
+
+  build-production:
+    name: 'Build Production Package'
+    needs: [extract-version, publish-test]
+    uses: ./.github/workflows/__call__build.yaml
+    with:
+      version: ${{ needs.extract-version.outputs.version }}
+      artifact-name: 'python-package-production'
+
+  # Publish to Production PyPI
+  publish-production:
+    name: 'Publish to Production PyPI'
+    needs: [build-production]
+    if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
+    uses: ./.github/workflows/__call__publish_pypi.yaml
+    with:
+      environment: 'production'
+      python-version: '3.11'
+      twine-repository-url: ${{ vars.PYPI_REPOSITORY || 'https://upload.pypi.org/legacy/' }}
+      artifact-name: 'python-package-production'
     secrets:
       pypi_username: ${{ secrets.PYPI_USERNAME }}
       pypi_password: ${{ secrets.PYPI_PASSWORD }}
@@ -86,7 +118,7 @@ jobs:
   # Create release tag
   tag-release:
     name: 'Tag Release'
-    needs: [extract-version, publish-test]
+    needs: [extract-version, publish-test, publish-production]
     runs-on: ubuntu-latest
     if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
     permissions:
@@ -106,17 +138,3 @@ jobs:
             git tag -a "v$VERSION" -m "Release version $VERSION"
             git push origin "v$VERSION"
           fi
-
-  # Publish to Production PyPI
-  publish-production:
-    name: 'Publish to Production PyPI'
-    needs: [tag-release]
-    if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
-    uses: ./.github/workflows/__call__publish_pypi.yaml
-    with:
-      environment: 'production'
-      python-version: '3.11'
-      twine-repository-url: ${{ vars.PYPI_REPOSITORY || 'https://upload.pypi.org/legacy/' }}
-    secrets:
-      pypi_username: ${{ secrets.PYPI_USERNAME }}
-      pypi_password: ${{ secrets.PYPI_PASSWORD }}
