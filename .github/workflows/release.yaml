@@ -57,6 +57,7 @@ jobs:
         run: |
           DEV_NUMBER=$((GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
           echo "value=${DEV_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "Dev number: $DEV_NUMBER"
 
   # Run checks first
   checks:
