@@ -10,6 +10,10 @@ on:
         required: false
         type: string
         default: '0.1.0'
+      artifact-name:
+        description: 'Artifact name to upload'
+        required: true
+        type: string
 
 env:
   PYTHON_VERSION: '3.11'
@@ -65,7 +69,7 @@ jobs:
       - name: 'Upload build artifacts'
         uses: actions/upload-artifact@v7
         with:
-          name: python-package
+          name: ${{ inputs.artifact-name }}
           path: |
             dist/
             Makefile
