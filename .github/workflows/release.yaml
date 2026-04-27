@@ -23,12 +23,19 @@ jobs:
       - name: Extract major/minor from branch name
         id: version
         run: |
-          BRANCH="${GITHUB_REF##*/}"        # release/1.4.x → 1.4.x
-          MAJOR=$(echo $BRANCH | cut -d. -f1)
-          MINOR=$(echo $BRANCH | cut -d. -f2)
+          BRANCH="${{ github.ref_name }}"   # e.g. release/1.4.x
 
-          echo "MAJOR=$MAJOR" >> $GITHUB_OUTPUT
-          echo "MINOR=$MINOR" >> $GITHUB_OUTPUT
+          if [[ "$BRANCH" =~ ^release/([0-9]+)\.([0-9]+)\.x$ ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+          else
+            echo "Invalid release branch format: $BRANCH"
+            echo "Expected: release/<major>.<minor>.x"
+            exit 1
+          fi
+
+          echo "MAJOR=$MAJOR" >> "$GITHUB_OUTPUT"
+          echo "MINOR=$MINOR" >> "$GITHUB_OUTPUT"
       
       - name: Determine next patch version
         id: patch
@@ -38,18 +45,24 @@ jobs:
   
           # Find existing tags like v1.4.*
           TAGS=$(git tag --list "v${MAJOR}.${MINOR}.*")
+
+          PATCHES=$(
+            echo "$TAGS" \
+              | sed -nE "s/^v${MAJOR//./\\.}\.${MINOR//./\\.}\.([0-9]+)$/\1/p" \
+              | sort -n
+          )
   
-          if [ -z "$TAGS" ]; then
+          if [ -z "$PATCHES" ]; then
             PATCH=0
           else
-            # Extract numeric patch values, sort, pick highest
-            PATCH=$(echo "$TAGS" | sed -E "s/v${MAJOR}.${MINOR}.//" | sort -n | tail -1)
+            # Pick highest numeric patch and increment it
+            PATCH=$(echo "$PATCHES" | tail -1)
             PATCH=$((PATCH + 1))
           fi
   
           VERSION="${MAJOR}.${MINOR}.${PATCH}"
   
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Next version: $VERSION"
 
       - name: Compute dev number from run and attempt
@@ -76,19 +89,19 @@ jobs:
     uses: ./.github/workflows/__call__build.yaml
     with:
       version: '${{ needs.extract-version.outputs.version }}.dev${{ needs.extract-version.outputs.dev-number }}'
-      artifact-name: 'python-package-test'
-
-  # Publish to Test PyPI
+      artifact-name: 'package-test'
+  
+    # Publish to Test Environment
   publish-test:
-    name: 'Publish to Test PyPI'
+    name: 'Publish to Test'
     needs: [extract-version, build-test]
     if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
-    uses: ./.github/workflows/__call__publish_pypi.yaml
+    uses: ./.github/workflows/__call__publish.yaml
     with:
       environment: 'test'
       python-version: '3.11'
-      twine-repository-url: ${{ vars.PYPI_REPOSITORY || 'https://test.pypi.org/legacy/' }}
-      artifact-name: 'python-package-test'
+      twine-repository-url: 'https://test.pypi.org/legacy/'
+      artifact-name: 'package-test'
     secrets:
       pypi_username: ${{ secrets.PYPI_USERNAME }}
       pypi_password: ${{ secrets.PYPI_PASSWORD }}
@@ -99,19 +112,19 @@ jobs:
     uses: ./.github/workflows/__call__build.yaml
     with:
       version: ${{ needs.extract-version.outputs.version }}
-      artifact-name: 'python-package-production'
+      artifact-name: 'package-production'
 
-  # Publish to Production PyPI
+  # Publish to Production Environment
   publish-production:
-    name: 'Publish to Production PyPI'
+    name: 'Publish to Production'
     needs: [build-production]
     if: github.ref_type == 'branch' && startsWith(github.ref_name, 'release/')
-    uses: ./.github/workflows/__call__publish_pypi.yaml
+    uses: ./.github/workflows/__call__publish.yaml
     with:
       environment: 'production'
       python-version: '3.11'
-      twine-repository-url: ${{ vars.PYPI_REPOSITORY || 'https://upload.pypi.org/legacy/' }}
-      artifact-name: 'python-package-production'
+      twine-repository-url: 'https://upload.pypi.org/legacy/'
+      artifact-name: 'package-production'
     secrets:
       pypi_username: ${{ secrets.PYPI_USERNAME }}
       pypi_password: ${{ secrets.PYPI_PASSWORD }}
