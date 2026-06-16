@@ -7,9 +7,8 @@ on:
     inputs:
       version:
         description: 'Version to build'
-        required: false
+        required: true
         type: string
-        default: '0.1.0'
       artifact-name:
         description: 'Artifact name to upload'
         required: true

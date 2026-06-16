@@ -8,6 +8,7 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
+  INTEGRATION_TEST_DIR: 'tests/integration'
 
 jobs:
   pylint:
@@ -23,7 +24,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      # Creates .venv and editable install so Makefile targets (liquisketch/.venv/bin/*) work.
+      # Creates .venv and editable install so Makefile targets work.
       - name: 'Install dependencies (make install-dev)'
         run: make install-dev
 
@@ -70,15 +71,31 @@ jobs:
     steps:
       - name: 'Checkout project sources'
         uses: actions/checkout@v6
+      
+      - name: 'Check if integration tests exist'
+        id: check-integration-tests
+        run: |
+          if [ -d "$(INTEGRATION_TEST_DIR)" ] && [ -n "$$(find $(INTEGRATION_TEST_DIR) -name 'test_*.py' 2>/dev/null | head -1)" ]; then
+            echo "Integration tests found under $(INTEGRATION_TEST_DIR)."
+            integration-tests-exist=true
+          else
+            echo "No integration tests found under $(INTEGRATION_TEST_DIR)."
+            integration_tests_exist=false
+          fi
+          echo "integration_tests_exist=$integration_tests_exist" >> "$GITHUB_OUTPUT"
 
       - name: 'Setup Python ${{ env.PYTHON_VERSION }}'
+        if: steps.check-integration-tests.outputs.integration_tests_exist == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
       - name: 'Install dependencies (make install-dev)'
+        if: steps.check-integration-tests.outputs.integration_tests_exist == 'true'
         run: make install-dev
 
       - name: 'Run integration tests (pytest)'
+        if: steps.check-integration-tests.outputs.integration_tests_exist == 'true'
+        # Integration tests are optional, so we need to check if they exist before running them.
         run: make test-integration
