@@ -2,7 +2,7 @@
 
 Follow these steps to merge updates from the template remote into your repository.
 
-For the agent workflow, see `.cursor/skills/template-merging/SKILL.md`.
+For the agent workflow, see `.cursor/skills/merge-template/SKILL.md`.
 
 ## Prerequisites
 
